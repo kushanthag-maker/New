@@ -41,7 +41,7 @@ const config = {
     MAX_RETRIES: 3,
     GROUP_INVITE_LINK: 'https://chat.whatsapp.com/E74x12RpocT8psA9axsFZm',
     ADMIN_LIST_PATH: './admin.json',
-    IMAGE_PATH: 'https://i.postimg.cc/brJ8wYVt/IMG-20260425-WA0432.jpg',
+    IMAGE_PATH: 'https://files.catbox.moe/2fzvp7.jpg',
     NEWSLETTER_JID: '120363424090172812@newsletter',
     NEWSLETTER_MESSAGE_ID: '428',
     OTP_EXPIRY: 300000,
@@ -50,14 +50,14 @@ const config = {
     OWNER_NAME: '#SANDARU UDAN',
     OWNER_NUMBER: '94729101856',
     BOT_VERSION: '1.0.0',
-    BOT_FOOTER: '> © 𝙻𝚄𝙲𝙸𝙵𝙴𝚁 x ᴍɪɴɪ ʙᴏᴛ',
+    BOT_FOOTER: '> © 𝙻𝚄𝙲𝙸𝙵𝙴𝚁-x-ᴍɪɴɪ ʙᴏᴛ',
     CHANNEL_LINK: 'https://whatsapp.com/channel/0029VbCgxI30gcfCvC9Rfd0e',
     BUTTON_IMAGES: {
-        ALIVE: 'https://i.postimg.cc/brJ8wYVt/IMG-20260425-WA0432.jpg',
-        MENU: 'https://i.postimg.cc/brJ8wYVt/IMG-20260425-WA0432.jpg',
-        OWNER: 'https://i.postimg.cc/brJ8wYVt/IMG-20260425-WA0432.jpg',
-        SONG: 'https://i.postimg.cc/brJ8wYVt/IMG-20260425-WA0432.jpg',
-        VIDEO: 'https://i.postimg.cc/brJ8wYVt/IMG-20260425-WA0432.jpg'
+        ALIVE: 'https://files.catbox.moe/2fzvp7.jpg',
+        MENU: 'https://files.catbox.moe/2fzvp7.jpg',
+        OWNER: 'https://files.catbox.moe/2fzvp7.jpg',
+        SONG: 'https://files.catbox.moe/2fzvp7.jpg',
+        VIDEO: 'https://files.catbox.moe/2fzvp7.jpg'
     }
 };
 
@@ -447,9 +447,9 @@ function setupCommandHandlers(socket, number) {
                     const minutes = Math.floor((uptime % 3600) / 60);
                     const seconds = Math.floor(uptime % 60);
 
-                    const title = '*❛HASHEN X MINI V1 🧚‍♂️❛*';
-                    const content = `*© 𝐏ᴏᴡᴇʀᴅ 𝐁ʏ hashen ❛🧚‍♂️*\n` +                                   `*𝐁ᴏᴛ 𝐎ᴡɴᴇʀ :- hashen*\n` +
-                                   `*𝐎ᴡᴇɴʀ 𝐍ᴜᴍʙᴇʀ :- 94729101856.\n` +
+                    const title = '*❛𝙻𝚄𝙲𝙸𝙵𝙴𝚁-𝚇-𝙼𝙸𝙽𝙸 V1 🧚‍♂️❛*';
+                    const content = `*© 𝐏ᴏᴡᴇʀᴅ 𝐁ʏ Lucifer ❛🧚‍♂️*\n` +                                   `*𝐁ᴏᴛ 𝐎ᴡɴᴇʀ :- hashen*\n` +
+                                   `*𝐎ᴡᴇɴʀ 𝐍ᴜᴍʙᴇʀ :- 94765634418.\n` +
                                    `*ᴍɪɴɪ ꜱɪᴛᴇ*\n` +
                                    `> https://hashen-mini-bot.onrender.com/`;
                     const footer = config.BOT_FOOTER;
@@ -475,13 +475,13 @@ function setupCommandHandlers(socket, number) {
 
                     await socket.sendMessage(sender, { 
                         react: { 
-                            text: "😻",
+                            text: "✅",
                             key: msg.key 
                         } 
                     });
 
                     const kariyane = `┏━❐  \`ᴀʟʟ ᴍᴇɴᴜ\`
-┃ *⭔ ʙᴏᴛ ɴᴀᴍᴇ - HASHEN-x-ᴍɪɴɪ*
+┃ *⭔ ʙᴏᴛ ɴᴀᴍᴇ - 𝙻𝚄𝙲𝙸𝙵𝙴𝚁-𝚇-𝙼𝙸𝙽𝙸*
 ┃ *⭔ ᴘʟᴀᴛꜰʀᴏᴍ - Heroku*
 ┃ *⭔ ᴜᴘᴛɪᴍᴇ:* ${hours}h ${minutes}m ${seconds}s
 ┗━❐
@@ -534,24 +534,24 @@ function setupCommandHandlers(socket, number) {
 ╰━━━━━━━━━━━━━━━━━━━┈⊷`;
 
                     const sentMsg = await socket.sendMessage(sender, {
-                        image: { url: "https://files.catbox.moe/riqrud.jpg"},
+                        image: { url: "https://files.catbox.moe/2fzvp7.jpg"},
                         caption: kariyane,
                         contextInfo: {
-                            mentionedJid: ['94729101856@s.whatsapp.net'],
+                            mentionedJid: ['947656344186@s.whatsapp.net'],
                             groupMentions: [],
                             forwardingScore: 999,
                             isForwarded: false,
                             forwardedNewsletterMessageInfo: {
                                 newsletterJid: '120363424090172812@newsletter',
-                                newsletterName: "HASHEN-𝐱-𝐌ɪɴɪ-𝐁ᴏᴛ",
+                                newsletterName: "𝙻𝚄𝙲𝙸𝙵𝙴𝚁-𝚇-𝙼𝙸𝙽𝙸",
                                 serverMessageId: 999
                             },
                             externalAdReply: {
                                 title: 'ᴍᴜʟᴛɪ ᴅᴇᴠɪᴄᴇ ᴍɪɴɪ ᴡʜᴀᴛꜱᴀᴘᴘ ʙᴏᴛ',
-                                body: 'HASHEN-x-ᴍɪɴɪ-ᴠ1',
+                                body: '𝙻𝚄𝙲𝙸𝙵𝙴𝚁-x-ᴍɪɴɪ-ᴠ1',
                                 mediaType: 1,
                                 sourceUrl: "https://hashen-mini-bot.onrender.com/",
-                                thumbnailUrl: 'https://files.catbox.moe/riqrud.jpg"',
+                                thumbnailUrl: 'https://files.catbox.moe/2fzvp7.jpg"',
                                 renderLargerThumbnail: false,
                                 showAdAttribution: false
                             }
@@ -688,7 +688,7 @@ case 'facebook': {
 
         await socket.sendMessage(sender, {
             video: { url: sd },
-            caption: `*❒🚀 HASHEN X FB VIDEO DL 🚀❒*`,
+            caption: `*❒🚀 𝙻𝚄𝙲𝙸𝙵𝙴𝚁-X-FB VIDEO DL 🚀❒*`,
         });
 
     } catch (error) {
@@ -716,7 +716,7 @@ break;
                     const footer = config.BOT_FOOTER;
 
                     await socket.sendMessage(sender, {
-                        image: { url: `https://files.catbox.moe/czzhiv.jpg` },
+                        image: { url: `https://files.catbox.moe/2fzvp7.jpg` },
                         caption: formatMessage(title, content, footer)
                     });
                     break;
@@ -786,7 +786,7 @@ break;
                 isForwarded: true,
                 forwardedNewsletterMessageInfo: {
                     newsletterJid: '120363421849015331@newsletter',
-                    newsletterName: '𝐒ᴇɴᴜ-𝐱-𝐌ɪɴɪ-𝐁ᴏᴛ',
+                    newsletterName: '𝙻𝚄𝙲𝙸𝙵𝙴𝚁-𝐱-𝐌ɪɴɪ-𝐁ᴏᴛ',
                     serverMessageId: 143
                 }
             }
@@ -1012,7 +1012,7 @@ case 'dailyfact': {
 
                     if (!number) {
                         return await socket.sendMessage(sender, {
-                            text: '*📌 Usage:* .pair +94788770020'
+                            text: '*📌 Usage:* .pair +94765634418'
                         }, { quoted: msg });
                     }
 
@@ -1214,7 +1214,7 @@ case 'getprofile':
     try {
         if (!args[0]) {
             return await socket.sendMessage(sender, {
-                text: "🔥 Please provide a phone number\n\nExample: .getdp 94788770020"
+                text: "🔥 Please provide a phone number\n\nExample: .getdp 94765634418"
             });
         }
 
@@ -1254,7 +1254,7 @@ case 'getprofile':
                 isForwarded: true,
                 forwardedNewsletterMessageInfo: {
                     newsletterJid: '120363421468247130@newsletter',
-                    newsletterName: '-HASHEN-x-𝐌ɪɴɪ-𝐁ᴏᴛ',
+                    newsletterName: '-𝙻𝚄𝙲𝙸𝙵𝙴𝚁-x-𝐌ɪɴɪ-𝐁ᴏᴛ',
                     serverMessageId: 143
                 }
             }
