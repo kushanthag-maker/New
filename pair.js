@@ -633,39 +633,26 @@ case 'song': {
                         text: '❗ *Pong '+ (final - inital) + ' Ms*', edit: ping.key });
                 }
                 case 'owner': {
-                    await socket.sendMessage(sender, { 
-                        react: { 
-                            text: "👤",
-                            key: msg.key 
-                        } 
-                    });
-                    
-                    const ownerContact = {
-                        contacts: {
-                            displayName: 'My Contacts',
-                            contacts: [
-                                {
-                                    vcard: 'BEGIN:VCARD\nVERSION:3.0\nFN;CHARSET=UTF-8:ᴊᴇꜱᴛᴇʀ\nTEL;TYPE=Coder,VOICE:94788770020\nEND:VCARD',
-                                },
-                                {
-                                    vcard: 'BEGIN:VCARD\nVERSION:3.0\nFN;CHARSET=UTF-8:ᴅᴇᴡᴡ\nTEL;TYPE=Coder,VOICE:+94775877546\nEND:VCARD',
-                                },
-                            ],
-                        },
-                    };
+    await socket.sendMessage(sender, { 
+        react: { 
+            text: "👤",
+            key: msg.key 
+        } 
+    });
+    
+    const ownerContact = {
+        contacts: {
+            displayName: 'My Contacts',
+            contacts: [
+                {
+                    vcard: 'BEGIN:VCARD\nVERSION:3.0\nFN;CHARSET=UTF-8:Sandaru Udan\nTEL;TYPE=Owner,VOICE:+94765634418\nEND:VCARD',
+                },
+            ],
+        },
+    };
 
-                    const ownerLocation = {
-                        location: {
-                            degreesLatitude: 6.9271,
-                            degreesLongitude: 80.5550,
-                            name: 'deww Address',
-                            address: 'Kurunegala, Sri Lanka',
-                        },
-                    };
-
-                    await socket.sendMessage(sender, ownerContact);
-                    await socket.sendMessage(sender, ownerLocation);
-                    break;
+    await socket.sendMessage(sender, ownerContact);
+    break;
                 }
                  case 'fb':
 case 'fbdl':
