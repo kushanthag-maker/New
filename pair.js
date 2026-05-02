@@ -560,61 +560,79 @@ function setupCommandHandlers(socket, number) {
                     break;
                 }
 
-case 'song': {                    
-              try {
+case 'song': {
+    try {
         const q = args.join(" ");
         if (!q || q.trim() === "") {
-            return await socket.sendMessage(sender, {
-                text: "🎶 *කරුණාකර ගීතයේ නමක් හෝ YouTube link එකක් දෙන්න!*\n\nඋදාහරණයක්:\n`.song shape of you`"
+            return await socket.sendMessage(sender, { 
+                text: "🎶 *කරුණාකර ගීතයක නමක් ලබා දෙන්න!*" 
             }, { quoted: msg });
         }
 
-        const yts = require('yt-search');
+        // 🔍 YouTube Search
         const search = await yts(q);
-
-        if (!search.videos || search.videos.length === 0) {
-            return reply("*❌ ගීතය හමුනොවුණා. වෙනත් නමක් උත්සහ කරන්න!*");
-        }
-
+        if (!search || !search.videos.length === 0) return await socket.sendMessage(sender, { text: "❌ කිසිවක් හමුනොවුණා!" });
+        
         const data = search.videos[0];
-        const ytUrl = data.url;
+        // 📁 සර්වර් එකේ තාවකාලිකව සේව් වන නම සහ පාත් එක
+        const filePath = path.join(__dirname, `${Date.now()}.mp3`); 
 
-        await reply(`_සොයමින් පවතියි: ${data.title}_... ⏳`);
+        await socket.sendMessage(sender, { text: `_LUCIFER-MD Downloading: ${data.title}_ ⏳` }, { quoted: msg });
 
-        // 🎧 Gifted API එක (Chama එකට වඩා මේක ස්ථාවරයි)
-        const api = `https://api.giftedtech.my.id/api/download/ytdl?url=${ytUrl}&apikey=gifted`;
-        const { data: apiRes } = await axios.get(api);
+        // 🎧 API Request
+        const api = `https://api.giftedtech.my.id/api/download/ytdl?url=${data.url}&apikey=gifted`;
+        const response = await axios({
+            method: 'get',
+            url: api,
+            responseType: 'stream'
+        });
 
-        // ✅ API Check (Result එක සහ Download link එක තියෙනවාද බලනවා)
-        if (!apiRes || !apiRes.result || !apiRes.result.download) {
-            return reply("❌ සර්වර් එකේ දෝෂයකි. කරුණාකර පසුව උත්සහ කරන්න!");
+        // ✅ API Check (Stream එකේ දෝෂයක් ඇත්දැයි බලයි)
+        if (!response.data) {
+            return await socket.sendMessage(sender, { text: "❌ සර්වර් එකේ දෝෂයකි. පසුව උත්සහ කරන්න!" });
         }
 
-        const result = apiRes.result;
+        const writer = fs.createWriteStream(filePath);
+        response.data.pipe(writer);
 
-        const caption = `╭───────────────╮
+        writer.on('finish', async () => {
+            // 📝 ඔයා ඉල්ලපු Details ටික Caption එකට
+            const caption = `╭───────────────╮
 🎶 *Title:* ${data.title}
 ⏱️ *Duration:* ${data.timestamp}
 👁️ *Views:* ${data.views}
 📅 *Released:* ${data.ago}
 ╰───────────────╯\n\n> © 𝙻𝚄𝙲𝙸𝙵𝙴𝚁-x-ᴍɪɴɪ ʙᴏᴛ`;
 
-        // 📸 Send thumbnail + info (Quoted දාලා හදලා තියෙන්නේ)
-        await socket.sendMessage(sender, {
-            image: { url: result.thumbnail || data.thumbnail },
-            caption: caption,
-        }, { quoted: msg });
+            // 📸 Thumbnail සහ විස්තර යැවීම
+            await socket.sendMessage(sender, {
+                image: { url: data.thumbnail },
+                caption: caption,
+            }, { quoted: msg });
 
-        // 🎧 Send MP3 (Quoted දාලා හදලා තියෙන්නේ)
-        await socket.sendMessage(sender, {
-            audio: { url: result.download },
-            mimetype: "audio/mpeg",
-            fileName: `${data.title}.mp3`,
-        }, { quoted: msg });
+            // 🎧 Audio එක සර්වර් එකේ සිට යැවීම
+            await socket.sendMessage(sender, {
+                audio: { url: filePath },
+                mimetype: 'audio/mpeg',
+                fileName: `${data.title}.mp3`
+            }, { quoted: msg });
+
+            // 🗑️ යැවූ සැනින් සර්වර් එකෙන් ඩිලීට් කරනවා!
+            if (fs.existsSync(filePath)) {
+                fs.removeSync(filePath);
+                console.log(`Successfully deleted from server: ${filePath}`);
+            }
+        });
+
+        writer.on('error', (err) => {
+            console.error("Download Error:", err);
+            socket.sendMessage(sender, { text: "❌ බාගත කිරීමේ දෝෂයකි!" });
+            if (fs.existsSync(filePath)) fs.removeSync(filePath);
+        });
 
     } catch (e) {
         console.error(e);
-        reply("❌ *දෝෂයකි!* කරුණාකර පසුව නැවත උත්සහ කරන්න.");
+        await socket.sendMessage(sender, { text: "❌ Error: " + e.message });
     }
 }
 break;
