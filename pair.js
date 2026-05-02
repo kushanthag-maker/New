@@ -562,7 +562,6 @@ function setupCommandHandlers(socket, number) {
                     
 case 'song': {
     try {
-        // 🧠 Check if user entered a song name or link
         const q = args.join(" ");
         if (!q || q.trim() === "") {
             return await socket.sendMessage(sender, {
@@ -580,44 +579,45 @@ case 'song': {
         const data = search.videos[0];
         const ytUrl = data.url;
 
-        // 🎧 Download API
-        const api = `https://ytmp333-chama-woad.vercel.app/api/ytdl?url=${ytUrl}`;
+        await reply(`_සොයමින් පවතියි: ${data.title}_... ⏳`);
+
+        // 🎧 Gifted API එක (Chama එකට වඩා මේක ස්ථාවරයි)
+        const api = `https://api.giftedtech.my.id/api/download/ytdl?url=${ytUrl}&apikey=gifted`;
         const { data: apiRes } = await axios.get(api);
 
-        if (!apiRes?.status || !apiRes.result?.download) {
-            return reply("❌ ගීතය බාගත කළ නොහැක. වෙනත් එකක් උත්සහ කරන්න!");
+        // ✅ API Check (Result එක සහ Download link එක තියෙනවාද බලනවා)
+        if (!apiRes || !apiRes.result || !apiRes.result.download) {
+            return reply("❌ සර්වර් එකේ දෝෂයකි. කරුණාකර පසුව උත්සහ කරන්න!");
         }
 
         const result = apiRes.result;
 
-        // 📝 Song info caption
         const caption = `╭───────────────╮
 🎶 *Title:* ${data.title}
 ⏱️ *Duration:* ${data.timestamp}
 👁️ *Views:* ${data.views}
 📅 *Released:* ${data.ago}
-╰───────────────╯`;
+╰───────────────╯\n\n> © 𝙻𝚄𝙲𝙸𝙵𝙴𝚁-x-ᴍɪɴɪ ʙᴏᴛ`;
 
-        // 📸 Send thumbnail + info
+        // 📸 Send thumbnail + info (Quoted දාලා හදලා තියෙන්නේ)
         await socket.sendMessage(sender, {
-            image: { url: result.thumbnail },
+            image: { url: result.thumbnail || data.thumbnail },
             caption: caption,
-        });
+        }, { quoted: msg });
 
-        // 🎧 Send MP3
+        // 🎧 Send MP3 (Quoted දාලා හදලා තියෙන්නේ)
         await socket.sendMessage(sender, {
             audio: { url: result.download },
             mimetype: "audio/mpeg",
             fileName: `${data.title}.mp3`,
-        });
+        }, { quoted: msg });
 
     } catch (e) {
         console.error(e);
         reply("❌ *දෝෂයකි!* කරුණාකර පසුව නැවත උත්සහ කරන්න.");
     }
-    break;
-
 }
+break;
 
                 case 'ping': {
                     var inital = new Date().getTime();
