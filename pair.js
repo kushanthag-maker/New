@@ -361,59 +361,59 @@ function setupCommandHandlers(socket, number) {
                     break;
                 }
 
-                const ytdl = require('@distube/ytdl-core');
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
+                case 'song': {
+    const { exec } = require('child_process');
+    const path = require('path');
+    const fs = require('fs');
+    const os = require('os');
 
-case 'song': {
     try {
         const text = args.join(' ');
         if (!text) return await socket.sendMessage(sender, { text: '🎶 *කරුණාකර සිංදුවක නමක් ලබා දෙන්න!*' });
 
-        // 1. YouTube Search
+        // 1. YouTube Search (yt-search පාවිච්චි කර සෙවීම)
         const search = await yts(text);
         if (!search || !search.videos.length) return await socket.sendMessage(sender, { text: '❌ කිසිවක් හමුනොවුණා.' });
 
         const video = search.videos[0];
+        const videoUrl = video.url;
         const filePath = path.join(os.tmpdir(), `${Date.now()}.mp3`);
 
+        // Reaction එකක් දැමීම
         await socket.sendMessage(sender, { react: { text: '⏳', key: msg.key } });
 
-        // 2. විස්තර යැවීම
-        const caption = `╭───────────────╮\n🎶 *Title:* ${video.title}\n⏱️ *Duration:* ${video.timestamp}\n🔗 *Link:* ${video.url}\n╰───────────────╯\n\n> © 𝙻𝚄𝙲𝙸𝙵𝙴𝚁-x-ᴍɪɴɪ ʙᴏᴛ`;
+        // 2. Thumbnail එක සහ විස්තර යැවීම
+        const caption = `╭───────────────╮\n🎶 *Title:* ${video.title}\n⏱️ *Duration:* ${video.timestamp}\n👁️ *Views:* ${video.views}\n🔗 *Link:* ${videoUrl}\n╰───────────────╯\n\n> © 𝙻𝚄𝙲𝙸福-x-ᴍɪɴɪ ʙᴏᴛ`;
         await socket.sendMessage(sender, { image: { url: video.thumbnail }, caption }, { quoted: msg });
 
-        // 3. @distube/ytdl-core හරහා කෙලින්ම Download කිරීම
-        const stream = ytdl(video.url, {
-            filter: 'audioonly',
-            quality: 'highestaudio',
-        });
+        // 3. yt-dlp හරහා Audio එක කෙලින්ම සර්වර් එකට Download කිරීම
+        // මෙහිදී බාහිර API අවශ්‍ය නොවේ
+        exec(`yt-dlp -f ba -x --audio-format mp3 -o "${filePath}" ${videoUrl}`, async (error, stdout, stderr) => {
+            if (error) {
+                console.error(`yt-dlp error: ${error.message}`);
+                return await socket.sendMessage(sender, { text: '❌ බාගත කිරීමේ දෝෂයක් සිදු වුණා.' });
+            }
 
-        const writer = fs.createWriteStream(filePath);
-        stream.pipe(writer);
+            // 4. බාගත වූ ගොනුව User ට යැවීම
+            if (fs.existsSync(filePath)) {
+                await socket.sendMessage(sender, { 
+                    audio: { url: filePath }, 
+                    mimetype: 'audio/mpeg', 
+                    fileName: `${video.title}.mp3` 
+                }, { quoted: msg });
 
-        writer.on('finish', async () => {
-            // 4. සින්දුව යැවීම
-            await socket.sendMessage(sender, { 
-                audio: { url: filePath }, 
-                mimetype: 'audio/mpeg', 
-                fileName: `${video.title}.mp3` 
-            }, { quoted: msg });
-
-            // 5. Cleanup - File එක මකා දැමීම
-            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-            await socket.sendMessage(sender, { react: { text: '✅', key: msg.key } });
-        });
-
-        writer.on('error', (err) => {
-            console.error(err);
-            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-            socket.sendMessage(sender, { text: '❌ බාගත කිරීමේ දෝෂයක්.' });
+                // 5. සර්වර් එකේ storage ඉතිරි කර ගැනීමට file එක delete කිරීම
+                fs.unlinkSync(filePath);
+                
+                // සාර්ථක වූ බව පෙන්වීමට reaction එක මාරු කිරීම
+                await socket.sendMessage(sender, { react: { text: '✅', key: msg.key } });
+            } else {
+                await socket.sendMessage(sender, { text: '❌ ගොනුව සොයා ගැනීමට නොහැකි විය.' });
+            }
         });
 
     } catch (e) {
-        console.error(e);
+        console.error("LUCIFER-X ERROR:", e);
         await socket.sendMessage(sender, { text: '❌ ERROR: ' + e.message });
     }
     break;
