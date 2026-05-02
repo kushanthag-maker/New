@@ -559,8 +559,9 @@ function setupCommandHandlers(socket, number) {
                     });
                     break;
                 }
-                    
-try {
+
+case 'song': {                    
+              try {
         const q = args.join(" ");
         if (!q || q.trim() === "") {
             return await socket.sendMessage(sender, {
