@@ -25,7 +25,9 @@
     "uuid": "^11.1.0",
     "yt-search": "2.12.1",
     "fluent-ffmpeg": "^2.1.2",
-    "@ffmpeg-installer/ffmpeg": "^1.1.0"
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "yt-dlp-exec": "^1.0.2",
+    "fs": "0.0.1-security"
   },
   "engines": {
     "node": "20.x"
@@ -39,4 +41,3 @@
   "author": "SANDARU UDAN",
   "license": "MIT"
 }
-
