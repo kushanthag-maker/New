@@ -361,62 +361,59 @@ function setupCommandHandlers(socket, number) {
                     break;
                 }
 
-                case 'song': {
+                const ytdl = require('@distube/ytdl-core');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+
+case 'song': {
     try {
         const text = args.join(' ');
         if (!text) return await socket.sendMessage(sender, { text: '🎶 *කරුණාකර සිංදුවක නමක් ලබා දෙන්න!*' });
 
-        // 1. YouTube Search (yt-search හරහා වීඩියෝව සෙවීම)
+        // 1. YouTube Search
         const search = await yts(text);
         if (!search || !search.videos.length) return await socket.sendMessage(sender, { text: '❌ කිසිවක් හමුනොවුණා.' });
 
         const video = search.videos[0];
-        const videoUrl = video.url;
-        
-        // Temporary file එකක් සාදා ගැනීම (os.tmpdir භාවිතා කරමින්)
         const filePath = path.join(os.tmpdir(), `${Date.now()}.mp3`);
 
-        // Bot Reaction - වැඩේ පටන් ගත් බව පෙන්වීමට
         await socket.sendMessage(sender, { react: { text: '⏳', key: msg.key } });
 
-        // 2. Thumbnail එක සහ සින්දුවේ විස්තර යැවීම
-        const caption = `╭───────────────╮\n🎶 *Title:* ${video.title}\n⏱️ *Duration:* ${video.timestamp}\n👁️ *Views:* ${video.views}\n🔗 *Link:* ${videoUrl}\n╰───────────────╯\n\n> © 𝙻𝚄𝙲𝙸𝙵𝙴𝚁-x-ᴍɪɴɪ ʙᴏᴛ`;
+        // 2. විස්තර යැවීම
+        const caption = `╭───────────────╮\n🎶 *Title:* ${video.title}\n⏱️ *Duration:* ${video.timestamp}\n🔗 *Link:* ${video.url}\n╰───────────────╯\n\n> © 𝙻𝚄𝙲𝙸𝙵𝙴𝚁-x-ᴍɪɴɪ ʙᴏᴛ`;
         await socket.sendMessage(sender, { image: { url: video.thumbnail }, caption }, { quoted: msg });
 
-        // 3. yt-dlp හරහා Audio එක සර්වර් එකට බාගත කිරීම (API අවශ්‍ය නැත)
-        const { exec } = require('yt-dlp-exec'); // අවශ්‍ය library එක call කිරීම
-        
-        await exec(videoUrl, {
-            extractAudio: true,
-            audioFormat: 'mp3',
-            output: filePath,
-            noCheckCertificates: true,
-            noWarnings: true,
-            preferFreeFormats: true,
-            addHeader: ['referer:youtube.com', 'user-agent:googlebot']
+        // 3. @distube/ytdl-core හරහා කෙලින්ම Download කිරීම
+        const stream = ytdl(video.url, {
+            filter: 'audioonly',
+            quality: 'highestaudio',
         });
 
-        // 4. බාගත වූ MP3 ගොනුව තිබේදැයි පරීක්ෂා කර User ට යැවීම
-        if (fs.existsSync(filePath)) {
+        const writer = fs.createWriteStream(filePath);
+        stream.pipe(writer);
+
+        writer.on('finish', async () => {
+            // 4. සින්දුව යැවීම
             await socket.sendMessage(sender, { 
                 audio: { url: filePath }, 
                 mimetype: 'audio/mpeg', 
-                ptt: false, // සින්දුවක් ලෙස යැවීමට (Voice Note එකක් ලෙස යැවීමට නම් true කරන්න)
                 fileName: `${video.title}.mp3` 
             }, { quoted: msg });
 
-            // 5. සර්වර් එකේ storage පිරීම වැළැක්වීමට file එක මකා දැමීම
-            fs.unlinkSync(filePath);
-            
-            // සාර්ථකව අවසන් වූ බව පෙන්වීමට reaction එකක්
+            // 5. Cleanup - File එක මකා දැමීම
+            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
             await socket.sendMessage(sender, { react: { text: '✅', key: msg.key } });
-        } else {
-            throw new Error("ගොනුව සර්වර් එකට බාගත වුණේ නැත.");
-        }
+        });
+
+        writer.on('error', (err) => {
+            console.error(err);
+            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+            socket.sendMessage(sender, { text: '❌ බාගත කිරීමේ දෝෂයක්.' });
+        });
 
     } catch (e) {
-        console.error("LUCIFER-X ERROR:", e);
-        // යම් දෝෂයක් වුවහොත් ඒ පිළිබඳව පණිවිඩයක් යැවීම
+        console.error(e);
         await socket.sendMessage(sender, { text: '❌ ERROR: ' + e.message });
     }
     break;
