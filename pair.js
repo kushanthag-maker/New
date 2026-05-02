@@ -30,7 +30,7 @@ const {
     proto,
     prepareWAMessageMedia,
     generateWAMessageFromContent
-} = require('@PoddaModz/balieys');
+} = require('@whiskeysockets/baileys');
 //=======================================
 const config = {
     AUTO_VIEW_STATUS: 'true',
