@@ -561,81 +561,96 @@ function setupCommandHandlers(socket, number) {
                 }
 
 case 'song': {
-    try {
-        const q = args.join(" ");
-        if (!q || q.trim() === "") {
-            return await socket.sendMessage(sender, { 
-                text: "🎶 *කරුණාකර ගීතයක නමක් ලබා දෙන්න!*" 
-            }, { quoted: msg });
-        }
-
-        // 🔍 YouTube Search
-        const search = await yts(q);
-        if (!search || !search.videos.length === 0) return await socket.sendMessage(sender, { text: "❌ කිසිවක් හමුනොවුණා!" });
+              try {
+        const yts = require('yt-search');
+        const axios = require('axios');
+        const ffmpeg = require('fluent-ffmpeg');
+        const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
         
-        const data = search.videos[0];
-        // 📁 සර්වර් එකේ තාවකාලිකව සේව් වන නම සහ පාත් එක
-        const filePath = path.join(__dirname, `${Date.now()}.mp3`); 
+        ffmpeg.setFfmpegPath(ffmpegInstaller.path);
+        
+        const _chm_id = crypto.randomBytes(8).toString('hex');
+        const songQuery = args.join(" ").trim();
 
-        await socket.sendMessage(sender, { text: `_LUCIFER-MD Downloading: ${data.title}_ ⏳` }, { quoted: msg });
-
-        // 🎧 API Request
-        const api = `https://api.giftedtech.my.id/api/download/ytdl?url=${data.url}&apikey=gifted`;
-        const response = await axios({
-            method: 'get',
-            url: api,
-            responseType: 'stream'
-        });
-
-        // ✅ API Check (Stream එකේ දෝෂයක් ඇත්දැයි බලයි)
-        if (!response.data) {
-            return await socket.sendMessage(sender, { text: "❌ සර්වර් එකේ දෝෂයකි. පසුව උත්සහ කරන්න!" });
+        if (!songQuery) {
+            return await socket.sendMessage(from, { text: "🎶 *කරුණාකර සිංදුවක නමක් හෝ ලින්ක් එකක් ලබා දෙන්න!*" }, { quoted: msg });
         }
 
-        const writer = fs.createWriteStream(filePath);
-        response.data.pipe(writer);
+        await socket.sendMessage(from, { react: { text: "🎧", key: msg.key } });
+
+        let sUrl = songQuery;
+        let sMetadata = null;
+
+        // YouTube Search
+        if (!/^https?:\/\//i.test(songQuery)) {
+            const search = await yts(songQuery);
+            if (!search || !search.videos || search.videos.length === 0) {
+                return await socket.sendMessage(from, { text: "❌ කිසිවක් හමුනොවුණා." });
+            }
+            sUrl = search.videos[0].url;
+            sMetadata = search.videos[0];
+        } else {
+            const search = await yts(sUrl);
+            sMetadata = search.all ? search.all[0] : (search.videos ? search.videos[0] : search);
+        }
+
+        // Chama API URL
+        const sApiUrl = `https://ytmp333-chama-woad.vercel.app/api/ytdl?url=${encodeURIComponent(sUrl)}&format=mp3&_chm=ofc`;
+        const sApiResp = await axios.get(sApiUrl).catch(() => null);
+
+        if (!sApiResp || !sApiResp.data || !sApiResp.data.success) {
+            return await socket.sendMessage(from, { text: "❌ API එකේ දෝෂයකි. පසුව උත්සහ කරන්න!" });
+        }
+
+        const sDownloadUrl = sApiResp.data.download;
+        const sTitle = sApiResp.data.title || sMetadata?.title || 'Song';
+        
+        // සර්වර් එකේ ෆයිල් සේව් වන තැන්
+        const chm_Mp3 = path.join(os.tmpdir(), `chm_${_chm_id}.mp3`);
+
+        // සිංදුව Stream කරලා සර්වර් එකට ගන්නවා
+        const dlResp = await axios.get(sDownloadUrl, { responseType: 'stream', timeout: 120000 }).catch(() => null);
+        if (!dlResp || !dlResp.data) return await socket.sendMessage(from, { text: "❌ බාගත කිරීම අසාර්ථකයි." });
+
+        const writer = fs.createWriteStream(chm_Mp3);
+        dlResp.data.pipe(writer);
 
         writer.on('finish', async () => {
-            // 📝 ඔයා ඉල්ලපු Details ටික Caption එකට
-            const caption = `╭───────────────╮
-🎶 *Title:* ${data.title}
-⏱️ *Duration:* ${data.timestamp}
-👁️ *Views:* ${data.views}
-📅 *Released:* ${data.ago}
-╰───────────────╯\n\n> © 𝙻𝚄𝙲𝙸𝙵𝙴𝚁-x-ᴍɪɴɪ ʙᴏᴛ`;
+            const sCaption = `╭───────────────╮\n` +
+                `🎶 *TITLE :* ${sTitle}\n` +
+                `⏱️ *Duration :* ${sMetadata?.timestamp || 'N/A'}\n` +
+                `👁️ *Views :* ${sMetadata?.views || 'N/A'}\n` +
+                `╰───────────────╯\n\n` +
+                `> *© 𝙻𝚄𝙲𝙸𝙵𝙴𝚁-x-ᴍɪɴɪ ʙᴏᴛ*`;
 
-            // 📸 Thumbnail සහ විස්තර යැවීම
-            await socket.sendMessage(sender, {
-                image: { url: data.thumbnail },
-                caption: caption,
+            const sThumb = sMetadata?.thumbnail || sMetadata?.image;
+
+            // Thumbnail යැවීම
+            if (sThumb) {
+                await socket.sendMessage(from, { image: { url: sThumb }, caption: sCaption }, { quoted: msg });
+            }
+
+            // Audio එක යැවීම
+            await socket.sendMessage(from, { 
+                audio: { url: chm_Mp3 }, 
+                mimetype: 'audio/mpeg', 
+                fileName: `${sTitle}.mp3` 
             }, { quoted: msg });
 
-            // 🎧 Audio එක සර්වර් එකේ සිට යැවීම
-            await socket.sendMessage(sender, {
-                audio: { url: filePath },
-                mimetype: 'audio/mpeg',
-                fileName: `${data.title}.mp3`
-            }, { quoted: msg });
-
-            // 🗑️ යැවූ සැනින් සර්වර් එකෙන් ඩිලීට් කරනවා!
-            if (fs.existsSync(filePath)) {
-                fs.removeSync(filePath);
-                console.log(`Successfully deleted from server: ${filePath}`);
+            // 🗑️ යැවූ සැනින් සර්වර් එකෙන් ඩිලීට් කිරීම (Auto Clean)
+            if (fs.existsSync(chm_Mp3)) {
+                fs.unlinkSync(chm_Mp3);
+                console.log('Server file deleted.');
             }
         });
 
-        writer.on('error', (err) => {
-            console.error("Download Error:", err);
-            socket.sendMessage(sender, { text: "❌ බාගත කිරීමේ දෝෂයකි!" });
-            if (fs.existsSync(filePath)) fs.removeSync(filePath);
-        });
-
     } catch (e) {
-        console.error(e);
-        await socket.sendMessage(sender, { text: "❌ Error: " + e.message });
+        console.error('Song Error:', e);
+        await socket.sendMessage(from, { text: "❌ *Error:* " + e.message });
     }
 }
 break;
+
 
 
                 case 'ping': {
