@@ -362,39 +362,52 @@ function setupCommandHandlers(socket, number) {
                 }
 
                 case 'song': {
-                    try {
-                        const text = args.join(' ');
-                        if (!text) return await socket.sendMessage(sender, { text: '🎶 *කරුණාකර සිංදුවක නමක් ලබා දෙන්න!*' });
-                        const search = await yts(text);
-                        if (!search || !search.videos.length) return await socket.sendMessage(sender, { text: '❌ කිසිවක් හමුනොවුණා.' });
-                        const video = search.videos[0];
-                        await socket.sendMessage(sender, { react: { text: '⏳', key: msg.key } });
-                        const apiUrl = `https://ytmp333-chama-woad.vercel.app/api/ytdl?url=${encodeURIComponent(video.url)}`;
-                        const apiResponse = await axios.get(apiUrl);
-                        if (!apiResponse.data || !apiResponse.data.success) {
-                            return await socket.sendMessage(sender, { text: '❌ API එක හරහා ගීතය ලබා ගැනීමට නොහැකි වුණා.' });
-                        }
-                        const downloadUrl = apiResponse.data.download;
-                        const songTitle = apiResponse.data.title || video.title;
-                        const filePath = path.join(os.tmpdir(), `${Date.now()}.mp3`);
-                        const caption = `╭───────────────╮\n🎶 *Title:* ${songTitle}\n⏱️ *Duration:* ${video.timestamp}\n👁️ *Views:* ${video.views}\n🔗 *Link:* ${video.url}\n╰───────────────╯\n\n> © 𝙻𝚄𝙲𝙸𝙵𝙴𝚁-x-ᴍɪɴɪ ʙᴏᴛ`;
-                        await socket.sendMessage(sender, { image: { url: video.thumbnail }, caption }, { quoted: msg });
-                        const response = await axios({ method: 'get', url: downloadUrl, responseType: 'stream' });
-                        const writer = fs.createWriteStream(filePath);
-                        response.data.pipe(writer);
-                        writer.on('finish', async () => {
-                            await socket.sendMessage(sender, { audio: { url: filePath }, mimetype: 'audio/mpeg', fileName: `${songTitle}.mp3` }, { quoted: msg });
-                            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-                        });
-                        writer.on('error', (err) => {
-                            console.error(err);
-                            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-                        });
-                    } catch (e) {
-                        console.error(e);
-                        await socket.sendMessage(sender, { text: '❌ ERROR: ' + e.message });
-                    }
-                    break;
+    try {
+        const text = args.join(' ');
+        if (!text) return await socket.sendMessage(sender, { text: '🎶 *කරුණාකර සිංදුවක නමක් ලබා දෙන්න!*' });
+
+        const search = await yts(text);
+        if (!search || !search.videos.length) return await socket.sendMessage(sender, { text: '❌ කිසිවක් හමුනොවුණා.' });
+
+        const video = search.videos[0];
+        await socket.sendMessage(sender, { react: { text: '⏳', key: msg.key } });
+
+        const apiUrl = `https://ytmp333-chama-woad.vercel.app/api/ytdl?url=${encodeURIComponent(video.url)}`;
+        
+        // Axios එකට timeout එකක් සහ headers එක් කිරීම (500 error එක වළක්වා ගැනීමට උත්සාහයක්)
+        const apiResponse = await axios.get(apiUrl, { 
+            timeout: 20000, // තත්පර 20ක් බලා සිටී
+            headers: { 'User-Agent': 'Mozilla/5.0' }
+        });
+
+        if (!apiResponse.data || !apiResponse.data.success) {
+            return await socket.sendMessage(sender, { text: '❌ API එක හරහා ගීතය ලබා ගැනීමට නොහැකි වුණා. පසුව උත්සාහ කරන්න.' });
+        }
+
+        const downloadUrl = apiResponse.data.download;
+        const songTitle = apiResponse.data.title || video.title;
+
+        const caption = `╭───────────────╮\n🎶 *Title:* ${songTitle}\n⏱️ *Duration:* ${video.timestamp}\n👁️ *Views:* ${video.views}\n🔗 *Link:* ${video.url}\n╰───────────────╯\n\n> © 𝙻𝚄𝙲𝙸福-x-ᴍɪɴɪ ʙᴏᴛ`;
+
+        // 1. Thumbnail එක යැවීම
+        await socket.sendMessage(sender, { image: { url: video.thumbnail }, caption }, { quoted: msg });
+
+        // 2. Audio එක කෙලින්ම URL එකෙන් යැවීම (Temp files නැතුව)
+        await socket.sendMessage(sender, { 
+            audio: { url: downloadUrl }, 
+            mimetype: 'audio/mpeg', 
+            fileName: `${songTitle}.mp3` 
+        }, { quoted: msg });
+
+        await socket.sendMessage(sender, { react: { text: '✅', key: msg.key } });
+
+    } catch (e) {
+        console.error(e);
+        // Error එක මොකක්ද කියලා හරියටම පෙන්වන්න
+        const errMsg = e.response ? `Server Error: ${e.response.status}` : e.message;
+        await socket.sendMessage(sender, { text: '❌ ERROR: ' + errMsg });
+    }
+    break;
                 }
 
                 case 'ping': {
