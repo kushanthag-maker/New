@@ -810,75 +810,65 @@ break;
 
     break;
 }    
-   case 'tiktoksearch': {
-    const axios = require('axios');
 
-    // Extract query from message
-    const q = msg.message?.conversation ||
-              msg.message?.extendedTextMessage?.text ||
-              msg.message?.imageMessage?.caption ||
-              msg.message?.videoMessage?.caption || '';
-
-    // Clean the command prefix (.tiktoksearch, /tiktoksearch, !tiktoksearch, .tiks, etc.)
-    const query = q.replace(/^[.\/!]tiktoksearch|tiks\s*/i, '').trim();
-
-    // Check if query is provided
-    if (!query) {
-        return await socket.sendMessage(sender, {
-            text: '🌸 *Usage:* .tiktoksearch <query>\n\nExample: .tiktoksearch funny dance'
-        }, { quoted: msg });
-    }
-
+case 'tiktokstalk':
+case 'tstalk':
+case 'ttstalk': {
     try {
-        // Send searching message
-        await socket.sendMessage(sender, {
-            text: `🔎 Searching TikTok for: *${query}*`
-        }, { quoted: msg });
+        const axios = require('axios');
+        const username = args[0]; // ctx.args වෙනුවට args
 
-        // Construct API URL
-        const apiUrl = `https://apis-starlights-team.koyeb.app/starlight/tiktoksearch?text=${encodeURIComponent(query)}`;
-        const { data } = await axios.get(apiUrl);
-
-        // Check if API response is valid
-        if (!data?.status || !data?.data || data.data.length === 0) {
+        if (!username) {
             return await socket.sendMessage(sender, {
-                text: '❌ No results found for your query. Please try with a different keyword.'
+                text: "❎ Please provide a TikTok username.\n\nExample: *.tiktokstalk backup.pavan.lk*",
             }, { quoted: msg });
         }
 
-        // Get up to 7 random results
-        const results = data.data.slice(0, 7).sort(() => Math.random() - 0.5);
+        // ⏳ Reaction එකක් දානවා
+        await socket.sendMessage(sender, { react: { text: "📱", key: msg.key } });
 
-        // Send each video result
-        for (const video of results) {
-            const caption = `🌸 *TikTok Video Result*\n\n` +
-                           `📖 *Title:* ${video.title || 'Unknown'}\n` +
-                           `👤 *Author:* ${video.author?.nickname || video.author || 'Unknown'}\n` +
-                           `⏱ *Duration:* ${video.duration || 'Unknown'}\n` +
-                           `🔗 *URL:* ${video.link || 'N/A'}\n`;
+        const apiUrl = `https://www.tikwm.com/api/user/info/?unique_id=@${encodeURIComponent(username)}`;
 
-            if (video.nowm) {
-                await socket.sendMessage(sender, {
-                    video: { url: video.nowm },
-                    caption: caption,
-                    contextInfo: { mentionedJid: [msg.key.participant || sender] }
-                }, { quoted: msg });
-            } else {
-                await socket.sendMessage(sender, {
-                    text: `❌ Failed to retrieve video for "${video.title || 'Unknown'}"`
-                }, { quoted: msg });
-            }
+        const { data } = await axios.get(apiUrl);
+
+        if (data.code !== 0 || !data.data) {
+            return await socket.sendMessage(sender, { 
+                text: "❌ Could not fetch profile. User may not exist." 
+            }, { quoted: msg });
         }
 
-    } catch (err) {
-        console.error("TikTokSearch command error:", err);
+        const user = data.data.user;
+        const stats = data.data.stats;
+
+        const caption = `🎭 *TikTok Profile Viewer* 🎭\n\n` +
+                        `👤 *Username:* @${user.uniqueId}\n` +
+                        `📛 *Nickname:* ${user.nickname}\n` +
+                        `📝 *Bio:* ${user.signature || "No bio"}\n` +
+                        `🔒 *Private:* ${user.privateAccount ? "Yes" : "No"}\n\n` +
+                        `📊 *Statistics*\n` +
+                        `👥 Followers: ${stats.followerCount.toLocaleString()}\n` +
+                        `👤 Following: ${stats.followingCount.toLocaleString()}\n` +
+                        `❤️ Likes: ${stats.heartCount.toLocaleString()}\n` +
+                        `🎥 Videos: ${stats.videoCount.toLocaleString()}\n\n` +
+                        `🌍 *Profile:* https://www.tiktok.com/@${user.uniqueId}\n\n` +
+                        `> *© 𝙻𝚄𝙲𝙸𝙵𝙴𝚁-x-ᴍɪɴɪ ʙᴏᴛ*`;
+
         await socket.sendMessage(sender, {
-            text: '❌ An error occurred while searching TikTok. Please try again later.'
+            image: { url: user.avatarLarger },
+            caption: caption,
+        }, { quoted: msg });
+
+    } catch (err) {
+        console.error("TikTok Stalk Error:", err);
+        await socket.sendMessage(sender, { 
+            text: "⚠️ Something went wrong fetching TikTok data." 
         }, { quoted: msg });
     }
-
-    break;
 }
+break;
+
+
+                    
 case 'dailyfact': {
     const arg = q.replace(/^[.\/!]dailyfact\s*/i, '').trim().toLowerCase();
     if (arg === 'on') {
