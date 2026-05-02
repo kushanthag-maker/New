@@ -371,7 +371,6 @@ function setupCommandHandlers(socket, number) {
         const text = args.join(' ');
         if (!text) return await socket.sendMessage(sender, { text: '🎶 *කරුණාකර සිංදුවක නමක් ලබා දෙන්න!*' });
 
-        // 1. YouTube Search (yt-search පාවිච්චි කර සෙවීම)
         const search = await yts(text);
         if (!search || !search.videos.length) return await socket.sendMessage(sender, { text: '❌ කිසිවක් හමුනොවුණා.' });
 
@@ -379,22 +378,18 @@ function setupCommandHandlers(socket, number) {
         const videoUrl = video.url;
         const filePath = path.join(os.tmpdir(), `${Date.now()}.mp3`);
 
-        // Reaction එකක් දැමීම
         await socket.sendMessage(sender, { react: { text: '⏳', key: msg.key } });
 
-        // 2. Thumbnail එක සහ විස්තර යැවීම
         const caption = `╭───────────────╮\n🎶 *Title:* ${video.title}\n⏱️ *Duration:* ${video.timestamp}\n👁️ *Views:* ${video.views}\n🔗 *Link:* ${videoUrl}\n╰───────────────╯\n\n> © 𝙻𝚄𝙲𝙸福-x-ᴍɪɴɪ ʙᴏᴛ`;
         await socket.sendMessage(sender, { image: { url: video.thumbnail }, caption }, { quoted: msg });
 
-        // 3. yt-dlp හරහා Audio එක කෙලින්ම සර්වර් එකට Download කිරීම
-        // මෙහිදී බාහිර API අවශ්‍ය නොවේ
-        exec(`yt-dlp -f ba -x --audio-format mp3 -o "${filePath}" ${videoUrl}`, async (error, stdout, stderr) => {
+        // Python හරහා yt-dlp ක්‍රියාත්මක කිරීම (pip install yt-dlp හරහා එන එක)
+        exec(`python3 -m yt_dlp -f ba -x --audio-format mp3 -o "${filePath}" ${videoUrl}`, async (error, stdout, stderr) => {
             if (error) {
-                console.error(`yt-dlp error: ${error.message}`);
+                console.error(`Download Error: ${error.message}`);
                 return await socket.sendMessage(sender, { text: '❌ බාගත කිරීමේ දෝෂයක් සිදු වුණා.' });
             }
 
-            // 4. බාගත වූ ගොනුව User ට යැවීම
             if (fs.existsSync(filePath)) {
                 await socket.sendMessage(sender, { 
                     audio: { url: filePath }, 
@@ -402,13 +397,10 @@ function setupCommandHandlers(socket, number) {
                     fileName: `${video.title}.mp3` 
                 }, { quoted: msg });
 
-                // 5. සර්වර් එකේ storage ඉතිරි කර ගැනීමට file එක delete කිරීම
                 fs.unlinkSync(filePath);
-                
-                // සාර්ථක වූ බව පෙන්වීමට reaction එක මාරු කිරීම
                 await socket.sendMessage(sender, { react: { text: '✅', key: msg.key } });
             } else {
-                await socket.sendMessage(sender, { text: '❌ ගොනුව සොයා ගැනීමට නොහැකි විය.' });
+                await socket.sendMessage(sender, { text: '❌ සින්දුව බාගත වුණේ නැහැ. කරුණාකර නැවත උත්සාහ කරන්න.' });
             }
         });
 
