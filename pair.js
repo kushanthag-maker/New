@@ -560,7 +560,7 @@ function setupCommandHandlers(socket, number) {
                     break;
                 }
                     
-    try {
+try {
         const q = args.join(" ");
         if (!q || q.trim() === "") {
             return await socket.sendMessage(sender, {
