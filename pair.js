@@ -1595,56 +1595,66 @@ case 'tiktok':
 case 'ttdl':
 case 'tt':
 case 'tiktokdl': {
-    // 🟢 Define q properly
-    let q = args.length ? args.join(" ") : text?.trim();
-
-    if (!q) {
-        reply("❌ Please provide a TikTok video link.\n\nExample: .tiktok https://www.tiktok.com/@username/video/123456789");
-        break;
-    }
-
-    if (!q.includes("tiktok.com")) {
-        reply("⚠️ Invalid TikTok link.");
-        break;
-    }
-
-    reply("⏳ Downloading video, please wait...");
-
     try {
-        const apiUrl = `https://delirius-apiofc.vercel.app/download/tiktok?url=${encodeURIComponent(q)}`;
-        const { data } = await axios.get(apiUrl);
+        const { tiktok } = require('ruhend-scraper'); // ඔයාගේ package.json එකේ මේක තියෙනවා
+        const path = require('path');
+        const fs = require('fs-extra');
+        const os = require('os');
+        const axios = require('axios');
 
-        if (!data.status || !data.data) {
-            reply("❌ Failed to fetch TikTok video.");
-            break;
-        }
+        let q = args.join(" ");
+        if (!q) return await socket.sendMessage(sender, { text: "❌ කරුණාකර TikTok ලින්ක් එකක් ලබා දෙන්න!" });
 
-        const { title, like, comment, share, author, meta } = data.data;
-        const videoUrl = meta.media.find(v => v.type === "video").org;
+        if (!q.includes("tiktok.com")) return await socket.sendMessage(sender, { text: "⚠️ වලංගු TikTok ලින්ක් එකක් ලබා දෙන්න." });
 
-        const caption =
-            `🎵 *TikTok Video* 🎵\n\n` +
-            `👤 *User:* ${author.nickname} (@${author.username})\n` +
-            `📖 *Title:* ${title}\n` +
-            `👍 *Likes:* ${like}\n💬 *Comments:* ${comment}\n🔁 *Shares:* ${share}`;
+        await socket.sendMessage(sender, { react: { text: "⏳", key: msg.key } });
 
-        await conn.sendMessage(
-            from,
-            {
-                video: { url: videoUrl },
-                caption: caption,
-                contextInfo: { mentionedJid: [m.sender] }
-            },
-            { quoted: mek }
-        );
+        // 🔍 TikTok ඩේටා ලබා ගැනීම (ruhend-scraper පාවිච්චි කරමින්)
+        const res = await tiktok(q);
+        if (!res || !res.url) return await socket.sendMessage(sender, { text: "❌ වීඩියෝව සොයාගත නොහැකි විය." });
+
+        const videoUrl = res.url; // වීඩියෝ ලින්ක් එක
+        const filePath = path.join(os.tmpdir(), `${Date.now()}.mp4`);
+
+        // 📝 Caption එක සැකසීම
+        const caption = `🎵 *LUCIFER-MD TIKTOK DOWNLOAD* 🎵\n\n` +
+            `📖 *Title:* ${res.title || 'TikTok Video'}\n` +
+            `> © 𝙻𝚄𝙲𝙸𝙵𝙴𝚁-x-ᴍɪɴɪ ʙᴏᴛ`;
+
+        // 📥 වීඩියෝ එක සර්වර් එකට බාගැනීම (Stream)
+        const response = await axios({
+            method: 'get',
+            url: videoUrl,
+            responseType: 'stream'
+        });
+
+        const writer = fs.createWriteStream(filePath);
+        response.data.pipe(writer);
+
+        writer.on('finish', async () => {
+            // 🎬 වීඩියෝව යූසර්ට යැවීම
+            await socket.sendMessage(sender, { 
+                video: { url: filePath }, 
+                caption: caption 
+            }, { quoted: msg });
+
+            // 🗑️ සර්වර් එකෙන් වහාම මැකීම (Storage Clean)
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+            }
+        });
+
+        writer.on('error', (err) => {
+            console.error(err);
+            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        });
 
     } catch (e) {
-        console.error("Error in TikTok downloader command:", e);
-        reply(`❌ An error occurred: ${e.message}`);
+        console.error(e);
+        await socket.sendMessage(sender, { text: "❌ ERROR: " + e.message });
     }
 }
-break;
-}                         
+break;                   
         } catch (error) {
             console.error('Command handler error:', error);
             await socket.sendMessage(sender, {
