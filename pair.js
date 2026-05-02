@@ -1476,39 +1476,43 @@ case 'react':
         });
     }
     break;
-                    case 'tiktok': {
-    const axios = require('axios');
-
-    const q = msg.message?.conversation ||
-              msg.message?.extendedTextMessage?.text ||
-              msg.message?.imageMessage?.caption ||
-              msg.message?.videoMessage?.caption || '';
-
-    const link = q.replace(/^[.\/!]tiktok(dl)?|tt(dl)?\s*/i, '').trim();
-
-    if (!link) {
-        return await socket.sendMessage(sender, {
-            text: '📌 *Usage:* .tiktok <link>'
-        }, { quoted: msg });
-    }
-
-    if (!link.includes('tiktok.com')) {
-        return await socket.sendMessage(sender, {
-            text: '❌ *Invalid TikTok link.*'
-        }, { quoted: msg });
-    }
-
+                    case 'tiktok':
+case 'ttdl':
+case 'tt':
+case 'tiktokdl': {
     try {
-        await socket.sendMessage(sender, {
-            text: '⏳ Downloading video, please wait...'
-        }, { quoted: msg });
+        const axios = require('axios');
 
+        // යූසර් එවපු මැසේජ් එකෙන් ලින්ක් එක වෙන් කරගැනීම
+        const q = msg.message?.conversation ||
+                  msg.message?.extendedTextMessage?.text ||
+                  msg.message?.imageMessage?.caption ||
+                  msg.message?.videoMessage?.caption || '';
+
+        const link = q.replace(/^[.\/!]tiktok(dl)?|tt(dl)?\s*/i, '').trim();
+
+        if (!link) {
+            return await socket.sendMessage(sender, {
+                text: '📌 *Usage:* .tiktok <link>'
+            }, { quoted: msg });
+        }
+
+        if (!link.includes('tiktok.com')) {
+            return await socket.sendMessage(sender, {
+                text: '❌ *Invalid TikTok link.*'
+            }, { quoted: msg });
+        }
+
+        // ⏳ Reaction එකක් දානවා
+        await socket.sendMessage(sender, { react: { text: "⏳", key: msg.key } });
+
+        // 🔍 Delirius API එකෙන් ඩේටා ලබාගැනීම
         const apiUrl = `https://delirius-apiofc.vercel.app/download/tiktok?url=${encodeURIComponent(link)}`;
         const { data } = await axios.get(apiUrl);
 
         if (!data?.status || !data?.data) {
             return await socket.sendMessage(sender, {
-                text: '❌ Failed to fetch TikTok video.'
+                text: '❌ වීඩියෝව සොයාගත නොහැකි විය.'
             }, { quoted: msg });
         }
 
@@ -1517,15 +1521,18 @@ case 'react':
 
         if (!video || !video.org) {
             return await socket.sendMessage(sender, {
-                text: '❌ No downloadable video found.'
+                text: '❌ බාගත හැකි වීඩියෝවක් හමුනොවුණා.'
             }, { quoted: msg });
         }
 
-        const caption = `🎵 *TIKTOK DOWNLOADR*\n\n` +
+        // 📝 Caption එක සැකසීම
+        const caption = `╭───────────────╮\n🎵 *TIKTOK DOWNLOADER* 🎵\n\n` +
                         `👤 *User:* ${author.nickname} (@${author.username})\n` +
-                        `📖 *Title:* ${title}\n` +
-                        `👍 *Likes:* ${like}\n💬 *Comments:* ${comment}\n🔁 *Shares:* ${share}`;
+                        `📖 *Title:* ${title || 'No Title'}\n` +
+                        `👍 *Likes:* ${like}\n💬 *Comments:* ${comment}\n🔁 *Shares:* ${share}\n╰───────────────╯\n\n` +
+                        `> *© 𝙻𝚄𝙲𝙸𝙵𝙴𝚁-x-ᴍɪɴɪ ʙᴏᴛ*`;
 
+        // 🎬 වීඩියෝව යැවීම
         await socket.sendMessage(sender, {
             video: { url: video.org },
             caption: caption,
@@ -1535,11 +1542,11 @@ case 'react':
     } catch (err) {
         console.error("TikTok command error:", err);
         await socket.sendMessage(sender, {
-            text: `❌ An error occurred:\n${err.message}`
+            text: `❌ ERROR: ${err.message}`
         }, { quoted: msg });
     }
-
-    break;
+}
+break;
        }
    case 'google':
 case 'gsearch':
