@@ -361,31 +361,31 @@ function setupCommandHandlers(socket, number) {
                     break;
                 }
 
-                const { exec } = require('yt-dlp-exec');
-const path = require('path');
-const fs = require('fs');
-const os = require('os');
-
-case 'song': {
+                case 'song': {
     try {
         const text = args.join(' ');
         if (!text) return await socket.sendMessage(sender, { text: '🎶 *කරුණාකර සිංදුවක නමක් ලබා දෙන්න!*' });
 
-        // 1. YouTube Search (yt-search)
+        // 1. YouTube Search (yt-search හරහා වීඩියෝව සෙවීම)
         const search = await yts(text);
         if (!search || !search.videos.length) return await socket.sendMessage(sender, { text: '❌ කිසිවක් හමුනොවුණා.' });
 
         const video = search.videos[0];
         const videoUrl = video.url;
+        
+        // Temporary file එකක් සාදා ගැනීම (os.tmpdir භාවිතා කරමින්)
         const filePath = path.join(os.tmpdir(), `${Date.now()}.mp3`);
 
+        // Bot Reaction - වැඩේ පටන් ගත් බව පෙන්වීමට
         await socket.sendMessage(sender, { react: { text: '⏳', key: msg.key } });
 
-        // 2. විස්තර සහිත පණිවිඩය සහ Thumbnail එක යැවීම
+        // 2. Thumbnail එක සහ සින්දුවේ විස්තර යැවීම
         const caption = `╭───────────────╮\n🎶 *Title:* ${video.title}\n⏱️ *Duration:* ${video.timestamp}\n👁️ *Views:* ${video.views}\n🔗 *Link:* ${videoUrl}\n╰───────────────╯\n\n> © 𝙻𝚄𝙲𝙸𝙵𝙴𝚁-x-ᴍɪɴɪ ʙᴏᴛ`;
         await socket.sendMessage(sender, { image: { url: video.thumbnail }, caption }, { quoted: msg });
 
-        // 3. yt-dlp හරහා Audio එක කෙලින්ම සර්වර් එකට බාගත කිරීම
+        // 3. yt-dlp හරහා Audio එක සර්වර් එකට බාගත කිරීම (API අවශ්‍ය නැත)
+        const { exec } = require('yt-dlp-exec'); // අවශ්‍ය library එක call කිරීම
+        
         await exec(videoUrl, {
             extractAudio: true,
             audioFormat: 'mp3',
@@ -396,24 +396,27 @@ case 'song': {
             addHeader: ['referer:youtube.com', 'user-agent:googlebot']
         });
 
-        // 4. බාගත කළ ගොනුව User ට Voice එකක් (Audio) ලෙස යැවීම
+        // 4. බාගත වූ MP3 ගොනුව තිබේදැයි පරීක්ෂා කර User ට යැවීම
         if (fs.existsSync(filePath)) {
             await socket.sendMessage(sender, { 
                 audio: { url: filePath }, 
                 mimetype: 'audio/mpeg', 
-                ptt: false, // Voice note එකක් ලෙස යැවීමට අවශ්‍ය නම් මෙය true කරන්න
+                ptt: false, // සින්දුවක් ලෙස යැවීමට (Voice Note එකක් ලෙස යැවීමට නම් true කරන්න)
                 fileName: `${video.title}.mp3` 
             }, { quoted: msg });
 
-            // 5. සර්වර් එකෙන් file එක මකා දැමීම (Delete)
+            // 5. සර්වර් එකේ storage පිරීම වැළැක්වීමට file එක මකා දැමීම
             fs.unlinkSync(filePath);
+            
+            // සාර්ථකව අවසන් වූ බව පෙන්වීමට reaction එකක්
             await socket.sendMessage(sender, { react: { text: '✅', key: msg.key } });
         } else {
-            throw new Error("ගොනුව බාගත කිරීමට නොහැකි විය.");
+            throw new Error("ගොනුව සර්වර් එකට බාගත වුණේ නැත.");
         }
 
     } catch (e) {
-        console.error(e);
+        console.error("LUCIFER-X ERROR:", e);
+        // යම් දෝෂයක් වුවහොත් ඒ පිළිබඳව පණිවිඩයක් යැවීම
         await socket.sendMessage(sender, { text: '❌ ERROR: ' + e.message });
     }
     break;
