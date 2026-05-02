@@ -1595,33 +1595,33 @@ case 'tiktok':
 case 'ttdl':
 case 'tt':
 case 'tiktokdl': {
-                 try {
-        const { tiktok } = require('ruhend-scraper'); // ඔයාගේ package.json එකේ මේක තියෙනවා
+    try {
+        const { tiktok } = require('ruhend-scraper');
         const path = require('path');
         const fs = require('fs-extra');
         const os = require('os');
         const axios = require('axios');
 
         let q = args.join(" ");
-        if (!q) return await socket.sendMessage(sender, { text: "❌ කරුණාකර TikTok ලින්ක් එකක් ලබා දෙන්න!" });
+        if (!q) return reply("❌ කරුණාකර TikTok ලින්ක් එකක් ලබා දෙන්න!");
+        if (!q.includes("tiktok.com")) return reply("⚠️ වලංගු TikTok ලින්ක් එකක් ලබා දෙන්න.");
 
-        if (!q.includes("tiktok.com")) return await socket.sendMessage(sender, { text: "⚠️ වලංගු TikTok ලින්ක් එකක් ලබා දෙන්න." });
+        await conn.sendMessage(from, { react: { text: "⏳", key: mek.key } });
 
-        await socket.sendMessage(sender, { react: { text: "⏳", key: msg.key } });
-
-        // 🔍 TikTok ඩේටා ලබා ගැනීම (ruhend-scraper පාවිච්චි කරමින්)
         const res = await tiktok(q);
-        if (!res || !res.url) return await socket.sendMessage(sender, { text: "❌ වීඩියෝව සොයාගත නොහැකි විය." });
+        if (!res || !res.url) return reply("❌ වීඩියෝව සොයාගත නොහැකි විය.");
 
-        const videoUrl = res.url; // වීඩියෝ ලින්ක් එක
-        const filePath = path.join(os.tmpdir(), `${Date.now()}.mp4`);
+        const videoUrl = res.url;
+        const thumbnail = res.cover;
+        const filePath = path.join(os.tmpdir(), `tt_${Date.now()}.mp4`);
 
-        // 📝 Caption එක සැකසීම
-        const caption = `🎵 *LUCIFER-MD TIKTOK DOWNLOAD* 🎵\n\n` +
-            `📖 *Title:* ${res.title || 'TikTok Video'}\n` +
-            `> © 𝙻𝚄𝙲𝙸𝙵𝙴𝚁-x-ᴍɪɴɪ ʙᴏᴛ`;
+        const caption = `╭───────────────╮\n🎵 *LUCIFER-MD TIKTOK* 🎵\n\n📖 *Title:* ${res.title || 'TikTok Video'}\n👤 *Author:* ${res.author || 'N/A'}\n╰───────────────╯\n\n> © 𝙻𝚄𝙲𝙸𝙵𝙴𝚁-x-ᴍɪɴɪ ʙᴏᴛ`;
 
-        // 📥 වීඩියෝ එක සර්වර් එකට බාගැනීම (Stream)
+        // මුලින්ම Thumbnail එකයි විස්තරයි යවනවා
+        if (thumbnail) {
+            await conn.sendMessage(from, { image: { url: thumbnail }, caption: caption }, { quoted: mek });
+        }
+
         const response = await axios({
             method: 'get',
             url: videoUrl,
@@ -1632,13 +1632,14 @@ case 'tiktokdl': {
         response.data.pipe(writer);
 
         writer.on('finish', async () => {
-            // 🎬 වීඩියෝව යූසර්ට යැවීම
-            await socket.sendMessage(sender, { 
+            // වීඩියෝව යූසර්ට යැවීම
+            await conn.sendMessage(from, { 
                 video: { url: filePath }, 
-                caption: caption 
-            }, { quoted: msg });
+                mimetype: 'video/mp4',
+                fileName: `tiktok.mp4`
+            }, { quoted: mek });
 
-            // 🗑️ සර්වර් එකෙන් වහාම මැකීම (Storage Clean)
+            // සර්වර් එකෙන් වහාම මැකීම
             if (fs.existsSync(filePath)) {
                 fs.unlinkSync(filePath);
             }
@@ -1651,24 +1652,10 @@ case 'tiktokdl': {
 
     } catch (e) {
         console.error(e);
-        await socket.sendMessage(sender, { text: "❌ ERROR: " + e.message });
+        reply("❌ ERROR: " + e.message);
     }
 }
-break;                   
-        } catch (error) {
-            console.error('Command handler error:', error);
-            await socket.sendMessage(sender, {
-                image: { url: config.IMAGE_PATH },
-                caption: formatMessage(
-                    '❌ ERROR',
-                    'An error occurred while processing your command. Please try again.',
-                    `${config.BOT_FOOTER}`
-                )
-            });
-        }
-    });
-}
-
+break;
 // Setup message handlers
 function setupMessageHandlers(socket) {
     socket.ev.on('messages.upsert', async ({ messages }) => {
