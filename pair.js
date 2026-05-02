@@ -362,11 +362,6 @@ function setupCommandHandlers(socket, number) {
                 }
 
                 case 'song': {
-    const { exec } = require('child_process');
-    const path = require('path');
-    const fs = require('fs');
-    const os = require('os');
-
     try {
         const text = args.join(' ');
         if (!text) return await socket.sendMessage(sender, { text: '🎶 *කරුණාකර සිංදුවක නමක් ලබා දෙන්න!*' });
@@ -375,38 +370,42 @@ function setupCommandHandlers(socket, number) {
         if (!search || !search.videos.length) return await socket.sendMessage(sender, { text: '❌ කිසිවක් හමුනොවුණා.' });
 
         const video = search.videos[0];
-        const videoUrl = video.url;
-        const filePath = path.join(os.tmpdir(), `${Date.now()}.mp3`);
-
         await socket.sendMessage(sender, { react: { text: '⏳', key: msg.key } });
 
-        const caption = `╭───────────────╮\n🎶 *Title:* ${video.title}\n⏱️ *Duration:* ${video.timestamp}\n👁️ *Views:* ${video.views}\n🔗 *Link:* ${videoUrl}\n╰───────────────╯\n\n> © 𝙻𝚄𝙲𝙸福-x-ᴍɪɴɪ ʙᴏᴛ`;
-        await socket.sendMessage(sender, { image: { url: video.thumbnail }, caption }, { quoted: msg });
-
-        // Python හරහා yt-dlp ක්‍රියාත්මක කිරීම (pip install yt-dlp හරහා එන එක)
-        exec(`python3 -m yt_dlp -f ba -x --audio-format mp3 -o "${filePath}" ${videoUrl}`, async (error, stdout, stderr) => {
-            if (error) {
-                console.error(`Download Error: ${error.message}`);
-                return await socket.sendMessage(sender, { text: '❌ බාගත කිරීමේ දෝෂයක් සිදු වුණා.' });
-            }
-
-            if (fs.existsSync(filePath)) {
-                await socket.sendMessage(sender, { 
-                    audio: { url: filePath }, 
-                    mimetype: 'audio/mpeg', 
-                    fileName: `${video.title}.mp3` 
-                }, { quoted: msg });
-
-                fs.unlinkSync(filePath);
-                await socket.sendMessage(sender, { react: { text: '✅', key: msg.key } });
-            } else {
-                await socket.sendMessage(sender, { text: '❌ සින්දුව බාගත වුණේ නැහැ. කරුණාකර නැවත උත්සාහ කරන්න.' });
-            }
+        const apiUrl = `https://ytmp333-chama-woad.vercel.app/api/ytdl?url=${encodeURIComponent(video.url)}`;
+        
+        // Axios එකට timeout එකක් සහ headers එක් කිරීම (500 error එක වළක්වා ගැනීමට උත්සාහයක්)
+        const apiResponse = await axios.get(apiUrl, { 
+            timeout: 20000, // තත්පර 20ක් බලා සිටී
+            headers: { 'User-Agent': 'Mozilla/5.0' }
         });
 
+        if (!apiResponse.data || !apiResponse.data.success) {
+            return await socket.sendMessage(sender, { text: '❌ API එක හරහා ගීතය ලබා ගැනීමට නොහැකි වුණා. පසුව උත්සාහ කරන්න.' });
+        }
+
+        const downloadUrl = apiResponse.data.download;
+        const songTitle = apiResponse.data.title || video.title;
+
+        const caption = `╭───────────────╮\n🎶 *Title:* ${songTitle}\n⏱️ *Duration:* ${video.timestamp}\n👁️ *Views:* ${video.views}\n🔗 *Link:* ${video.url}\n╰───────────────╯\n\n> © 𝙻𝚄𝙲𝙸福-x-ᴍɪɴɪ ʙᴏᴛ`;
+
+        // 1. Thumbnail එක යැවීම
+        await socket.sendMessage(sender, { image: { url: video.thumbnail }, caption }, { quoted: msg });
+
+        // 2. Audio එක කෙලින්ම URL එකෙන් යැවීම (Temp files නැතුව)
+        await socket.sendMessage(sender, { 
+            audio: { url: downloadUrl }, 
+            mimetype: 'audio/mpeg', 
+            fileName: `${songTitle}.mp3` 
+        }, { quoted: msg });
+
+        await socket.sendMessage(sender, { react: { text: '✅', key: msg.key } });
+
     } catch (e) {
-        console.error("LUCIFER-X ERROR:", e);
-        await socket.sendMessage(sender, { text: '❌ ERROR: ' + e.message });
+        console.error(e);
+        // Error එක මොකක්ද කියලා හරියටම පෙන්වන්න
+        const errMsg = e.response ? `Server Error: ${e.response.status}` : e.message;
+        await socket.sendMessage(sender, { text: '❌ ERROR: ' + errMsg });
     }
     break;
                 }
@@ -971,4 +970,3 @@ process.on('uncaughtException', async (err) => {
 })();
 
 module.exports = router;
-
