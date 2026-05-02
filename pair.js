@@ -581,7 +581,7 @@ case 'song': {
         const ytUrl = data.url;
 
         // 🎧 Download API
-        const api = `https://sadiya-tech-apis.vercel.app/download/ytdl?url=${ytUrl}&format=mp3&apikey=sadiya`;
+        const api = `https://api.giftedtech.my.id/api/download/ytdl?url=${ytUrl}&apikey=gifted`;
         const { data: apiRes } = await axios.get(api);
 
         if (!apiRes?.status || !apiRes.result?.download) {
