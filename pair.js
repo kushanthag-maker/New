@@ -581,7 +581,7 @@ case 'song': {
         const ytUrl = data.url;
 
         // 🎧 Download API
-        const api = `https://api.giftedtech.my.id/api/download/ytdl?url=${ytUrl}&apikey=gifted`;
+        const api = `https://ytmp333-chama-woad.vercel.app/api/ytdl?url=${ytUrl}`;
         const { data: apiRes } = await axios.get(api);
 
         if (!apiRes?.status || !apiRes.result?.download) {
