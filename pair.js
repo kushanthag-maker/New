@@ -1513,41 +1513,95 @@ case 'tiktokdl': {
         if (!data?.status || !data?.data) {
             return await socket.sendMessage(sender, {
                 text: '❌ වීඩියෝව සොයාගත නොහැකි විය.'
+case 'tiktok':
+case 'ttdl':
+case 'tt':
+case 'tiktokdl': {
+    try {
+        const axios = require('axios');
+
+        // 1. මැසේජ් එකෙන් ලින්ක් එක වෙන් කරගැනීම
+        const q = (msg.message?.conversation ||
+                  msg.message?.extendedTextMessage?.text ||
+                  msg.message?.imageMessage?.caption ||
+                  msg.message?.videoMessage?.caption || '').trim();
+
+        const link = q.replace(/^[.\/!]tiktok(dl)?|tt(dl)?\s*/i, '').trim();
+
+        // 2. ලින්ක් එකක් නැත්නම් දැනුම් දීම
+        if (!link) {
+            return await socket.sendMessage(sender, { 
+                text: '📌 *Usage:* .tiktok <link>\n\n*Example:* .tiktok https://vt.tiktok.com/ZSXXXX/' 
+            }, { quoted: msg });
+        }
+
+        // 3. TikTok ලින්ක් එකක්දැයි බැලීම
+        if (!link.includes('tiktok.com')) {
+            return await socket.sendMessage(sender, { 
+                text: '❌ *Invalid TikTok link.* කරුණාකර නිවැරදි ලින්ක් එකක් ලබාදෙන්න.' 
+            }, { quoted: msg });
+        }
+
+        // ⏳ Reaction එකක් දානවා
+        await socket.sendMessage(sender, { react: { text: "⏳", key: msg.key } });
+
+        // 4. API එකෙන් ඩේටා ලබාගැනීම (Delirius API)
+        const apiUrl = `https://delirius-apiofc.vercel.app/download/tiktok?url=${encodeURIComponent(link)}`;
+        const { data } = await axios.get(apiUrl);
+
+        if (!data?.status || !data?.data) {
+            return await socket.sendMessage(sender, { 
+                text: '❌ වීඩියෝව සොයාගත නොහැකි විය. පසුව නැවත උත්සාහ කරන්න.' 
             }, { quoted: msg });
         }
 
         const { title, like, comment, share, author, meta } = data.data;
+        
+        // වීඩියෝ ලින්ක් එක තෝරාගැනීම
         const video = meta.media.find(v => v.type === "video");
 
         if (!video || !video.org) {
-            return await socket.sendMessage(sender, {
-                text: '❌ බාගත හැකි වීඩියෝවක් හමුනොවුණා.'
+            return await socket.sendMessage(sender, { 
+                text: '❌ බාගත හැකි වීඩියෝවක් හමුනොවුණා.' 
             }, { quoted: msg });
         }
 
-        // 📝 Caption එක සැකසීම
-        const caption = `╭───────────────╮\n🎵 *TIKTOK DOWNLOADER* 🎵\n\n` +
+        // 5. Caption එක සැකසීම (ලස්සන Box එකක් සමඟ)
+        const caption = `╭───────────────╮\n` +
+                        `🎵 *LUCIFER-MD TIKTOK* 🎵\n\n` +
                         `👤 *User:* ${author.nickname} (@${author.username})\n` +
                         `📖 *Title:* ${title || 'No Title'}\n` +
-                        `👍 *Likes:* ${like}\n💬 *Comments:* ${comment}\n🔁 *Shares:* ${share}\n╰───────────────╯\n\n` +
+                        `👍 *Likes:* ${like}\n` +
+                        `💬 *Comments:* ${comment}\n` +
+                        `🔁 *Shares:* ${share}\n` +
+                        `╰───────────────╯\n\n` +
                         `> *© 𝙻𝚄𝙲𝙸𝙵𝙴𝚁-x-ᴍɪɴɪ ʙᴏᴛ*`;
 
-        // 🎬 වීඩියෝව යැවීම
+        // 6. වීඩියෝව යැවීම
         await socket.sendMessage(sender, {
             video: { url: video.org },
             caption: caption,
-            contextInfo: { mentionedJid: [msg.key.participant || sender] }
+            contextInfo: { 
+                mentionedJid: [msg.key.participant || sender],
+                externalAdReply: {
+                    title: "LUCIFER-MD TIKTOK DOWNLOADER",
+                    body: author.nickname,
+                    thumbnailUrl: author.avatar,
+                    sourceUrl: link,
+                    mediaType: 1,
+                    renderLargerThumbnail: true
+                }
+            }
         }, { quoted: msg });
 
     } catch (err) {
-        console.error("TikTok command error:", err);
-        await socket.sendMessage(sender, {
-            text: `❌ ERROR: ${err.message}`
+        console.error("TikTok error:", err);
+        await socket.sendMessage(sender, { 
+            text: `❌ *ERROR:* ${err.message}` 
         }, { quoted: msg });
     }
 }
 break;
-       }
    case 'google':
 case 'gsearch':
 case 'search':
@@ -1598,71 +1652,7 @@ case 'search':
         });
     }
     break;             
-case 'tiktok':
-case 'ttdl':
-case 'tt':
-case 'tiktokdl': {
-    try {
-        const { tiktok } = require('ruhend-scraper');
-        const path = require('path');
-        const fs = require('fs-extra');
-        const os = require('os');
-        const axios = require('axios');
 
-        let q = args.join(" ");
-        if (!q) return reply("❌ කරුණාකර TikTok ලින්ක් එකක් ලබා දෙන්න!");
-        if (!q.includes("tiktok.com")) return reply("⚠️ වලංගු TikTok ලින්ක් එකක් ලබා දෙන්න.");
-
-        await conn.sendMessage(from, { react: { text: "⏳", key: mek.key } });
-
-        const res = await tiktok(q);
-        if (!res || !res.url) return reply("❌ වීඩියෝව සොයාගත නොහැකි විය.");
-
-        const videoUrl = res.url;
-        const thumbnail = res.cover;
-        const filePath = path.join(os.tmpdir(), `tt_${Date.now()}.mp4`);
-
-        const caption = `╭───────────────╮\n🎵 *LUCIFER-MD TIKTOK* 🎵\n\n📖 *Title:* ${res.title || 'TikTok Video'}\n👤 *Author:* ${res.author || 'N/A'}\n╰───────────────╯\n\n> © 𝙻𝚄𝙲𝙸𝙵𝙴𝚁-x-ᴍɪɴɪ ʙᴏᴛ`;
-
-        // මුලින්ම Thumbnail එකයි විස්තරයි යවනවා
-        if (thumbnail) {
-            await conn.sendMessage(from, { image: { url: thumbnail }, caption: caption }, { quoted: mek });
-        }
-
-        const response = await axios({
-            method: 'get',
-            url: videoUrl,
-            responseType: 'stream'
-        });
-
-        const writer = fs.createWriteStream(filePath);
-        response.data.pipe(writer);
-
-        writer.on('finish', async () => {
-            // වීඩියෝව යූසර්ට යැවීම
-            await conn.sendMessage(from, { 
-                video: { url: filePath }, 
-                mimetype: 'video/mp4',
-                fileName: `tiktok.mp4`
-            }, { quoted: mek });
-
-            // සර්වර් එකෙන් වහාම මැකීම
-            if (fs.existsSync(filePath)) {
-                fs.unlinkSync(filePath);
-            }
-        });
-
-        writer.on('error', (err) => {
-            console.error(err);
-            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-        });
-
-    } catch (e) {
-        console.error(e);
-        reply("❌ ERROR: " + e.message);
-    }
-}
-break;
 // Setup message handlers
 function setupMessageHandlers(socket) {
     socket.ev.on('messages.upsert', async ({ messages }) => {
