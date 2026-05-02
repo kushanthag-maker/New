@@ -487,24 +487,73 @@ function setupCommandHandlers(socket, number) {
                     break;
                 }
 
-                case 'tiktokstalk':
-                case 'tstalk':
-                case 'ttstalk': {
-                    try {
-                        const username = args[0];
-                        if (!username) return await socket.sendMessage(sender, { text: '❎ Please provide a TikTok username.\n\nExample: *.tiktokstalk username*' }, { quoted: msg });
-                        await socket.sendMessage(sender, { react: { text: '📱', key: msg.key } });
-                        const { data } = await axios.get(`https://www.tikwm.com/api/user/info/?unique_id=@${encodeURIComponent(username)}`);
-                        if (data.code !== 0 || !data.data) return await socket.sendMessage(sender, { text: '❌ Could not fetch profile.' }, { quoted: msg });
-                        const user = data.data.user;
-                        const stats = data.data.stats;
-                        const caption = `🎭 *TikTok Profile Viewer* 🎭\n\n👤 *Username:* @${user.uniqueId}\n📛 *Nickname:* ${user.nickname}\n📝 *Bio:* ${user.signature || 'No bio'}\n🔒 *Private:* ${user.privateAccount ? 'Yes' : 'No'}\n\n📊 *Statistics*\n👥 Followers: ${stats.followerCount.toLocaleString()}\n👤 Following: ${stats.followingCount.toLocaleString()}\n❤️ Likes: ${stats.heartCount.toLocaleString()}\n🎥 Videos: ${stats.videoCount.toLocaleString()}\n\n> *© 𝙻𝚄𝙲𝙸𝙵𝙴𝚁-x-ᴍɪɴɪ ʙᴏᴛ*`;
-                        await socket.sendMessage(sender, { image: { url: user.avatarLarger }, caption }, { quoted: msg });
-                    } catch (err) {
-                        await socket.sendMessage(sender, { text: '⚠️ Something went wrong fetching TikTok data.' }, { quoted: msg });
-                    }
-                    break;
-                }
+case 'tiktok': {
+const axios = require('axios');
+
+const q = msg.message?.conversation ||
+msg.message?.extendedTextMessage?.text ||
+msg.message?.imageMessage?.caption ||
+msg.message?.videoMessage?.caption || '';
+
+const link = q.replace(/^[.\/!]tiktok(dl)?|tt(dl)?\s*/i, '').trim();
+
+if (!link) {
+return await socket.sendMessage(sender, {
+text: '📌 *Usage:* .tiktok <link>'
+}, { quoted: heshanmini });
+}
+
+if (!link.includes('tiktok.com')) {
+return await socket.sendMessage(sender, {
+text: '❌ *Invalid TikTok link.*'
+}, { quoted: heshanmini });
+}
+
+try {
+await socket.sendMessage(sender, {
+text: '⏳ Downloading video, please wait...'
+}, { quoted: heshanmini });
+
+const apiUrl = `https://6f810ddc-4773-4f0f-a661-d1d7dce64c0d-00-1umzxb72e09ol.pike.replit.dev/api/tiktok/video?url=${encodeURIComponent(link)}`;
+const { data } = await axios.get(apiUrl, { timeout: 60000 });
+
+if (!data?.status) {
+  return await socket.sendMessage(sender, {
+    text: '❌ Failed to fetch TikTok video.'
+  }, { quoted: heshanmini });
+}
+
+const { title, creator, stats, downloads } = data;
+if (!downloads?.video) {
+return await socket.sendMessage(sender, {
+text: '❌ No downloadable video found.'
+}, { quoted: heshanmini });
+}
+
+const caption = `🎵 *TIKTOK DOWNLOADER*\n\n` +
+`👤 *Creator:* ${creator}\n` +
+`📖 *Title:* ${title}\n\n` +
+`👁️ *Views:* ${stats.views}\n` +
+`👍 *Likes:* ${stats.likes}\n` +
+`💬 *Comments:* ${stats.comments}\n` +
+`🔁 *Shares:* ${stats.shares}`;
+
+await socket.sendMessage(sender, {
+video: { url: downloads.video },
+caption: caption,
+contextInfo: { mentionedJid: [msg.key.participant || sender] }
+}, { quoted: heshanmini });
+
+} catch (err) {
+await socket.sendMessage(sender, {
+text: `❌ An error occurred:\n${err.message}`
+}, { quoted: heshanmini });
+}
+
+break;
+}
+
+
 
                 case 'dailyfact': {
                     const q = (msg.message?.conversation || msg.message?.extendedTextMessage?.text || '').replace(/^[.\/!]dailyfact\s*/i, '').trim().toLowerCase();
