@@ -560,7 +560,6 @@ function setupCommandHandlers(socket, number) {
                     break;
                 }
                     
-case 'song': {
     try {
         const q = args.join(" ");
         if (!q || q.trim() === "") {
@@ -618,6 +617,7 @@ case 'song': {
     }
 }
 break;
+
 
                 case 'ping': {
                     var inital = new Date().getTime();
