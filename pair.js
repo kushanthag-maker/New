@@ -1595,7 +1595,7 @@ case 'tiktok':
 case 'ttdl':
 case 'tt':
 case 'tiktokdl': {
-    try {
+                 try {
         const { tiktok } = require('ruhend-scraper'); // ඔයාගේ package.json එකේ මේක තියෙනවා
         const path = require('path');
         const fs = require('fs-extra');
