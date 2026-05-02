@@ -561,97 +561,85 @@ function setupCommandHandlers(socket, number) {
                 }
 
 case 'song': {
-              try {
+             try {
         const yts = require('yt-search');
         const axios = require('axios');
-        const ffmpeg = require('fluent-ffmpeg');
-        const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
-        
-        ffmpeg.setFfmpegPath(ffmpegInstaller.path);
-        
-        const _chm_id = crypto.randomBytes(8).toString('hex');
-        const songQuery = args.join(" ").trim();
+        const path = require('path');
+        const fs = require('fs-extra');
+        const os = require('os');
 
-        if (!songQuery) {
-            return await socket.sendMessage(from, { text: "🎶 *කරුණාකර සිංදුවක නමක් හෝ ලින්ක් එකක් ලබා දෙන්න!*" }, { quoted: msg });
+        const text = args.join(" ");
+        if (!text) return await socket.sendMessage(sender, { text: "🎶 *කරුණාකර සිංදුවක නමක් හෝ ලින්ක් එකක් ලබා දෙන්න!*" });
+
+        // 🔍 YouTube Search - සිංදුව සෙවීම
+        const search = await yts(text);
+        if (!search || !search.videos.length) return await socket.sendMessage(sender, { text: "❌ කිසිවක් හමුනොවුණා." });
+        const video = search.videos[0];
+
+        await socket.sendMessage(sender, { react: { text: "⏳", key: msg.key } });
+
+        // 🔗 ඔයාගේ API එකට YT Link එක Replace කිරීම
+        const apiUrl = `https://ytmp333-chama-woad.vercel.app/api/ytdl?url=${encodeURIComponent(video.url)}`;
+        
+        // API එකට Request එකක් යැවීම
+        const apiResponse = await axios.get(apiUrl);
+        
+        if (!apiResponse.data || !apiResponse.data.success) {
+            return await socket.sendMessage(sender, { text: "❌ API එක හරහා ගීතය ලබා ගැනීමට නොහැකි වුණා." });
         }
 
-        await socket.sendMessage(from, { react: { text: "🎧", key: msg.key } });
+        const downloadUrl = apiResponse.data.download;
+        const songTitle = apiResponse.data.title || video.title;
+        const filePath = path.join(os.tmpdir(), `${Date.now()}.mp3`);
 
-        let sUrl = songQuery;
-        let sMetadata = null;
+        // 📝 විස්තර සහ Thumbnail යැවීම
+        const caption = `╭───────────────╮
+🎶 *Title:* ${songTitle}
+⏱️ *Duration:* ${video.timestamp}
+👁️ *Views:* ${video.views}
+🔗 *Link:* ${video.url}
+╰───────────────╯\n\n> © 𝙻𝚄𝙲𝙸𝙵𝙴𝚁-x-ᴍɪɴɪ ʙᴏᴛ`;
 
-        // YouTube Search
-        if (!/^https?:\/\//i.test(songQuery)) {
-            const search = await yts(songQuery);
-            if (!search || !search.videos || search.videos.length === 0) {
-                return await socket.sendMessage(from, { text: "❌ කිසිවක් හමුනොවුණා." });
-            }
-            sUrl = search.videos[0].url;
-            sMetadata = search.videos[0];
-        } else {
-            const search = await yts(sUrl);
-            sMetadata = search.all ? search.all[0] : (search.videos ? search.videos[0] : search);
-        }
+        await socket.sendMessage(sender, { 
+            image: { url: video.thumbnail }, 
+            caption: caption 
+        }, { quoted: msg });
 
-        // Chama API URL
-        const sApiUrl = `https://ytmp333-chama-woad.vercel.app/api/ytdl?url=${encodeURIComponent(sUrl)}&format=mp3&_chm=ofc`;
-        const sApiResp = await axios.get(sApiUrl).catch(() => null);
+        // 📥 සිංදුව Download කරගැනීම
+        const response = await axios({
+            method: 'get',
+            url: downloadUrl,
+            responseType: 'stream'
+        });
 
-        if (!sApiResp || !sApiResp.data || !sApiResp.data.success) {
-            return await socket.sendMessage(from, { text: "❌ API එකේ දෝෂයකි. පසුව උත්සහ කරන්න!" });
-        }
-
-        const sDownloadUrl = sApiResp.data.download;
-        const sTitle = sApiResp.data.title || sMetadata?.title || 'Song';
-        
-        // සර්වර් එකේ ෆයිල් සේව් වන තැන්
-        const chm_Mp3 = path.join(os.tmpdir(), `chm_${_chm_id}.mp3`);
-
-        // සිංදුව Stream කරලා සර්වර් එකට ගන්නවා
-        const dlResp = await axios.get(sDownloadUrl, { responseType: 'stream', timeout: 120000 }).catch(() => null);
-        if (!dlResp || !dlResp.data) return await socket.sendMessage(from, { text: "❌ බාගත කිරීම අසාර්ථකයි." });
-
-        const writer = fs.createWriteStream(chm_Mp3);
-        dlResp.data.pipe(writer);
+        const writer = fs.createWriteStream(filePath);
+        response.data.pipe(writer);
 
         writer.on('finish', async () => {
-            const sCaption = `╭───────────────╮\n` +
-                `🎶 *TITLE :* ${sTitle}\n` +
-                `⏱️ *Duration :* ${sMetadata?.timestamp || 'N/A'}\n` +
-                `👁️ *Views :* ${sMetadata?.views || 'N/A'}\n` +
-                `╰───────────────╯\n\n` +
-                `> *© 𝙻𝚄𝙲𝙸𝙵𝙴𝚁-x-ᴍɪɴɪ ʙᴏᴛ*`;
-
-            const sThumb = sMetadata?.thumbnail || sMetadata?.image;
-
-            // Thumbnail යැවීම
-            if (sThumb) {
-                await socket.sendMessage(from, { image: { url: sThumb }, caption: sCaption }, { quoted: msg });
-            }
-
-            // Audio එක යැවීම
-            await socket.sendMessage(from, { 
-                audio: { url: chm_Mp3 }, 
+            // 🎧 Audio එක User ට යැවීම
+            await socket.sendMessage(sender, { 
+                audio: { url: filePath }, 
                 mimetype: 'audio/mpeg', 
-                fileName: `${sTitle}.mp3` 
+                fileName: `${songTitle}.mp3` 
             }, { quoted: msg });
 
-            // 🗑️ යැවූ සැනින් සර්වර් එකෙන් ඩිලීට් කිරීම (Auto Clean)
-            if (fs.existsSync(chm_Mp3)) {
-                fs.unlinkSync(chm_Mp3);
-                console.log('Server file deleted.');
+            // 🗑️ සර්වර් එකෙන් ඩිලීට් කිරීම (Cleanup)
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
             }
         });
 
+        writer.on('error', (err) => {
+            console.error(err);
+            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        });
+
     } catch (e) {
-        console.error('Song Error:', e);
-        await socket.sendMessage(from, { text: "❌ *Error:* " + e.message });
+        console.error(e);
+        await socket.sendMessage(sender, { text: "❌ ERROR: " + e.message });
     }
 }
 break;
-
-
 
                 case 'ping': {
                     var inital = new Date().getTime();
