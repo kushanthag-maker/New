@@ -361,51 +361,60 @@ function setupCommandHandlers(socket, number) {
                     break;
                 }
 
-                case 'song': {
+                const { exec } = require('yt-dlp-exec');
+const path = require('path');
+const fs = require('fs');
+const os = require('os');
+
+case 'song': {
     try {
         const text = args.join(' ');
         if (!text) return await socket.sendMessage(sender, { text: '🎶 *කරුණාකර සිංදුවක නමක් ලබා දෙන්න!*' });
 
+        // 1. YouTube Search (yt-search)
         const search = await yts(text);
         if (!search || !search.videos.length) return await socket.sendMessage(sender, { text: '❌ කිසිවක් හමුනොවුණා.' });
 
         const video = search.videos[0];
+        const videoUrl = video.url;
+        const filePath = path.join(os.tmpdir(), `${Date.now()}.mp3`);
+
         await socket.sendMessage(sender, { react: { text: '⏳', key: msg.key } });
 
-        const apiUrl = `https://ytmp333-chama-woad.vercel.app/api/ytdl?url=${encodeURIComponent(video.url)}`;
-        
-        // Axios එකට timeout එකක් සහ headers එක් කිරීම (500 error එක වළක්වා ගැනීමට උත්සාහයක්)
-        const apiResponse = await axios.get(apiUrl, { 
-            timeout: 20000, // තත්පර 20ක් බලා සිටී
-            headers: { 'User-Agent': 'Mozilla/5.0' }
-        });
-
-        if (!apiResponse.data || !apiResponse.data.success) {
-            return await socket.sendMessage(sender, { text: '❌ API එක හරහා ගීතය ලබා ගැනීමට නොහැකි වුණා. පසුව උත්සාහ කරන්න.' });
-        }
-
-        const downloadUrl = apiResponse.data.download;
-        const songTitle = apiResponse.data.title || video.title;
-
-        const caption = `╭───────────────╮\n🎶 *Title:* ${songTitle}\n⏱️ *Duration:* ${video.timestamp}\n👁️ *Views:* ${video.views}\n🔗 *Link:* ${video.url}\n╰───────────────╯\n\n> © 𝙻𝚄𝙲𝙸福-x-ᴍɪɴɪ ʙᴏᴛ`;
-
-        // 1. Thumbnail එක යැවීම
+        // 2. විස්තර සහිත පණිවිඩය සහ Thumbnail එක යැවීම
+        const caption = `╭───────────────╮\n🎶 *Title:* ${video.title}\n⏱️ *Duration:* ${video.timestamp}\n👁️ *Views:* ${video.views}\n🔗 *Link:* ${videoUrl}\n╰───────────────╯\n\n> © 𝙻𝚄𝙲𝙸𝙵𝙴𝚁-x-ᴍɪɴɪ ʙᴏᴛ`;
         await socket.sendMessage(sender, { image: { url: video.thumbnail }, caption }, { quoted: msg });
 
-        // 2. Audio එක කෙලින්ම URL එකෙන් යැවීම (Temp files නැතුව)
-        await socket.sendMessage(sender, { 
-            audio: { url: downloadUrl }, 
-            mimetype: 'audio/mpeg', 
-            fileName: `${songTitle}.mp3` 
-        }, { quoted: msg });
+        // 3. yt-dlp හරහා Audio එක කෙලින්ම සර්වර් එකට බාගත කිරීම
+        await exec(videoUrl, {
+            extractAudio: true,
+            audioFormat: 'mp3',
+            output: filePath,
+            noCheckCertificates: true,
+            noWarnings: true,
+            preferFreeFormats: true,
+            addHeader: ['referer:youtube.com', 'user-agent:googlebot']
+        });
 
-        await socket.sendMessage(sender, { react: { text: '✅', key: msg.key } });
+        // 4. බාගත කළ ගොනුව User ට Voice එකක් (Audio) ලෙස යැවීම
+        if (fs.existsSync(filePath)) {
+            await socket.sendMessage(sender, { 
+                audio: { url: filePath }, 
+                mimetype: 'audio/mpeg', 
+                ptt: false, // Voice note එකක් ලෙස යැවීමට අවශ්‍ය නම් මෙය true කරන්න
+                fileName: `${video.title}.mp3` 
+            }, { quoted: msg });
+
+            // 5. සර්වර් එකෙන් file එක මකා දැමීම (Delete)
+            fs.unlinkSync(filePath);
+            await socket.sendMessage(sender, { react: { text: '✅', key: msg.key } });
+        } else {
+            throw new Error("ගොනුව බාගත කිරීමට නොහැකි විය.");
+        }
 
     } catch (e) {
         console.error(e);
-        // Error එක මොකක්ද කියලා හරියටම පෙන්වන්න
-        const errMsg = e.response ? `Server Error: ${e.response.status}` : e.message;
-        await socket.sendMessage(sender, { text: '❌ ERROR: ' + errMsg });
+        await socket.sendMessage(sender, { text: '❌ ERROR: ' + e.message });
     }
     break;
                 }
